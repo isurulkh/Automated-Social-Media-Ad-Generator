@@ -6,20 +6,6 @@ import replicate
 
 st.set_page_config(page_title="Automated Social Media Ad Generator", layout="wide")
 
-
-# Add your actual Imgur API credentials here
-client_id = '9ff9030abe27fd0'
-client_secret = '8271ab63ed484313184a8f091677326161b498f0'
-
-# Create an ImgurClient instance
-client = ImgurClient(client_id, client_secret)
-
-# Initialize image_type and description to default values
-image_type = ""
-description = ""
-
-
-
 def main():
     st.title("Automated Social Media Ad Generator")
 
@@ -37,7 +23,23 @@ def main():
 uploaded_file = st.file_uploader("Upload an image:", type=["jpg", "png", "jpeg"])
 
 
-            
+if uploaded_file is not None:
+        with st.spinner("Uploading image..."):
+            tfile = tempfile.NamedTemporaryFile(delete=True)
+            tfile.write(uploaded_file.read())
+            image = client.upload_from_path(tfile.name)
+            image_url = image['link']
+        st.image(image_url, caption="Uploaded Image.", use_column_width=True)
+        
+        with st.spinner("Identifying image type..."):
+            image_type = get_image_type(image_url)
+        st.write(f"Image Type: {image_type}")
+
+        with st.spinner("Generating description..."):
+            description = get_description(tfile.name, image_type)
+        st.write(f"Description: {description}")
+        
+
 # Function to identify image type using Fuyu-8B model
 def get_image_type(image_url):
     """
@@ -73,35 +75,9 @@ def get_description(file_path, image_type):
     result = ''.join(item for item in output)
     return result
 
+
 ad_text = st.text_area("Customize the ad text:", f"Discover the perfect {image_type.lower()}! {description}")
 if st.button("Preview Ad"):
     st.write("## Ad Preview:")
     st.write(ad_text)
     st.image(image_url, use_column_width=True)
-    
-
-if uploaded_file is not None:
-    with st.spinner("Uploading image..."):
-        tfile = tempfile.NamedTemporaryFile(delete=True)
-        tfile.write(uploaded_file.read())
-        try:
-            image = client.upload_from_path(tfile.name)
-            image_url = image['link']
-            st.image(image_url, caption="Uploaded Image.", use_column_width=True)
-
-            with st.spinner("Identifying image type..."):
-                image_type = get_image_type(image_url)
-            st.write(f"Image Type: {image_type}")
-
-            with st.spinner("Generating description..."):
-                description = get_description(tfile.name, image_type)
-            st.write(f"Description: {description}")
-
-        except Exception as e:
-            st.error(f"Error uploading image to Imgur: {str(e)}")
-            
-
-
-
-if __name__ == "__main__":
-    main()
